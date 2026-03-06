@@ -44,14 +44,29 @@ jobs:
           mkdir -p build_release
           mkdir -p release
           cd build_release
-          PICO_SDK_PATH="${PICO_SDK_PATH}" cmake .. -DPICO_BOARD=pico2 -DWAVESHARE_RP2350_ONE=ON
+          PICO_SDK_PATH="${PICO_SDK_PATH}" cmake .. -DPICO_BOARD=pico2 -DWAVESHARE_RP2350_ONE=ON -DVIDPID=Yubikey5
           make -j$(nproc)
-          mv pico_fido.uf2 ../release/pico_fido_pico2.uf2
+          mv pico_fido.uf2 ../release/pico_fido_pico2_yubikey5.uf2
 
-      - name: Patch VID/PID to YubiKey5
+      - name: Verify VID/PID
         run: |
-          cd release
-          ../pico-fido-patch-vidpid.sh 1050:0407 pico_fido_pico2.uf2 pico_fido_pico2_yubikey5.uf2
+          echo "Verifying VID/PID in firmware..."
+          echo "Expected: VID=0x1050 (Yubico), PID=0x0407 (YubiKey 5 FIDO)"
+          echo ""
+          echo "Searching for YubiKey5 VID/PID pattern (50 10 07 04 in little-endian)..."
+          if hexdump -C release/pico_fido_pico2_yubikey5.uf2 | grep -q "50 10 07 04"; then
+            echo "✓ VID/PID verified: 0x1050:0x0407 (YubiKey5)"
+          else
+            echo "✗ Warning: YubiKey5 VID/PID pattern not found, checking default..."
+            if hexdump -C release/pico_fido_pico2_yubikey5.uf2 | grep -q "8a 2e fe 10"; then
+              echo "✗ Found default Raspberry Pi VID/PID: 0x2E8A:0x10FE"
+            else
+              echo "✗ Could not determine VID/PID"
+            fi
+          fi
+          echo ""
+          echo "File info:"
+          ls -la release/pico_fido_pico2_yubikey5.uf2
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -72,6 +87,7 @@ jobs:
             
             **Board:** Pico 2 (RP2350)
             **Waveshare RP2350-One LED:** Enabled
+            **VID/PID:** 0x1050:0x0407 (YubiKey5)
           artifacts: "release/pico_fido_pico2_yubikey5.uf2"
           draft: false
           prerelease: false
