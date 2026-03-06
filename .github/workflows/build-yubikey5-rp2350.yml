@@ -1,6 +1,8 @@
 name: "Build YubiKey5 Emulation for RP2350"
 
 on:
+  push:
+    branches: [ "main", "development" ]
   workflow_dispatch:
 
 jobs:
@@ -57,3 +59,15 @@ jobs:
           name: pico_fido_rp2350_yubikey5
           path: release/pico_fido_pico2_yubikey5.uf2
           retention-days: 30
+
+      - name: Create release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: yubikey5-rp2350-${{ github.sha }}
+          name: YubiKey5 Emulation for RP2350 (${{ github.sha }})
+          body: "Automatic build of YubiKey5 emulation firmware for RP2350"
+          artifacts: "release/pico_fido_pico2_yubikey5.uf2"
+          draft: false
+          prerelease: false
