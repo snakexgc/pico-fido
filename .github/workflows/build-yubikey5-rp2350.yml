@@ -1,0 +1,59 @@
+name: "Build YubiKey5 Emulation for RP2350"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-yubikey5:
+    name: Build YubiKey5 firmware for RP2350
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Setup build environment
+        run: |
+          sudo apt update
+          sudo apt install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+
+      - name: Setup Pico SDK
+        run: |
+          git clone https://github.com/raspberrypi/pico-sdk
+          cd pico-sdk
+          git checkout tags/2.1.1
+          git submodule update --init
+          cd ..
+          git clone https://github.com/raspberrypi/picotool
+          cd picotool
+          git submodule update --init
+          mkdir build
+          cd build
+          cmake -DPICO_SDK_PATH=../../pico-sdk ..
+          make -j$(nproc)
+          sudo make install
+          cd ../..
+
+      - name: Build firmware for RP2350
+        env:
+          PICO_SDK_PATH: ../pico-sdk
+        run: |
+          mkdir -p build_release
+          mkdir -p release
+          cd build_release
+          PICO_SDK_PATH="${PICO_SDK_PATH}" cmake .. -DPICO_BOARD=pico2
+          make -j$(nproc)
+          mv pico_fido.uf2 ../release/pico_fido_pico2.uf2
+
+      - name: Patch VID/PID to YubiKey5
+        run: |
+          cd release
+          ../pico-fido-patch-vidpid.sh 1050:0407 pico_fido_pico2.uf2 pico_fido_pico2_yubikey5.uf2
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pico_fido_rp2350_yubikey5
+          path: release/pico_fido_pico2_yubikey5.uf2
+          retention-days: 30
