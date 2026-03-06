@@ -44,7 +44,7 @@ jobs:
           mkdir -p build_release
           mkdir -p release
           cd build_release
-          PICO_SDK_PATH="${PICO_SDK_PATH}" cmake .. -DPICO_BOARD=pico2
+          PICO_SDK_PATH="${PICO_SDK_PATH}" cmake .. -DPICO_BOARD=pico2 -DWAVESHARE_RP2350_ONE=ON
           make -j$(nproc)
           mv pico_fido.uf2 ../release/pico_fido_pico2.uf2
 
@@ -67,7 +67,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: yubikey5-rp2350-${{ github.sha }}
           name: YubiKey5 Emulation for RP2350 (${{ github.sha }})
-          body: "Automatic build of YubiKey5 emulation firmware for RP2350"
+          body: |
+            Automatic build of YubiKey5 emulation firmware for RP2350
+            
+            **Board:** Pico 2 (RP2350)
+            **Waveshare RP2350-One LED:** Enabled
           artifacts: "release/pico_fido_pico2_yubikey5.uf2"
           draft: false
           prerelease: false
