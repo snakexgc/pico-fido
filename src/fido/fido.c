@@ -17,7 +17,6 @@
 
 #include "pico_keys.h"
 #include "fido.h"
-#include "kek.h"
 #include "apdu.h"
 #include "ctap.h"
 #include "files.h"
@@ -226,23 +225,31 @@ int load_keydev(uint8_t key[32]) {
         uint16_t fid_size = file_get_size(ef_keydev);
         if (fid_size == 32) {
             memcpy(key, file_get_data(ef_keydev), 32);
-            if (mkek_decrypt(key, 32) != PICOKEY_OK) {
-                return PICOKEY_EXEC_ERROR;
-            }
             if (otp_key_1 && aes_decrypt(otp_key_1, NULL, 32 * 8, PICO_KEYS_AES_MODE_CBC, key, 32) != PICOKEY_OK) {
                 return PICOKEY_EXEC_ERROR;
             }
         }
         else if (fid_size == 33 || fid_size == 61) {
             uint8_t format = *file_get_data(ef_keydev);
-            if (format == 0x01 || format == 0x02) { // Format indicator
-                if (format == 0x02) {
-                    uint8_t tmp_key[61];
+            if (format == 0x01 || format == 0x02 || format == 0x03) { // Format indicator
+                if (format == 0x02 || format == 0x03) {
+                    uint8_t tmp_key[61], version = format == 0x03 ? 2 : 1;
                     memcpy(tmp_key, file_get_data(ef_keydev), sizeof(tmp_key));
-                    int ret = decrypt_with_aad(session_pin, tmp_key + 1, 60, key);
+                    int ret = decrypt_with_aad(session_pin, tmp_key + 1, 60, version, key);
                     if (ret != PICOKEY_OK) {
                         return PICOKEY_EXEC_ERROR;
                     }
+                    if (format == 0x02) {
+                        tmp_key[0] = 0x03;
+                        ret = encrypt_with_aad(session_pin, key, 32, 2, tmp_key + 1);
+                        if (ret != PICOKEY_OK) {
+                            mbedtls_platform_zeroize(tmp_key, sizeof(tmp_key));
+                            return PICOKEY_EXEC_ERROR;
+                        }
+                        file_put_data(ef_keydev, tmp_key, sizeof(tmp_key));
+                        low_flash_available();
+                    }
+                    mbedtls_platform_zeroize(tmp_key, sizeof(tmp_key));
                 }
                 else {
                     memcpy(key, file_get_data(ef_keydev) + 1, 32);
@@ -372,7 +379,6 @@ int encrypt_keydev_f1(const uint8_t keydev[32]) {
 int scan_files_fido(void) {
     ef_keydev = search_by_fid(EF_KEY_DEV, NULL, SPECIFY_EF);
     ef_keydev_enc = search_by_fid(EF_KEY_DEV_ENC, NULL, SPECIFY_EF);
-    ef_mkek = search_by_fid(EF_MKEK, NULL, SPECIFY_EF);
     if (ef_keydev) {
         if (!file_has_data(ef_keydev) && !file_has_data(ef_keydev_enc)) {
             printf("KEY DEVICE is empty. Generating SECP256R1 curve...");
