@@ -44,7 +44,7 @@ jobs:
           mkdir -p build_release
           mkdir -p release
           cd build_release
-          PICO_SDK_PATH="${PICO_SDK_PATH}" cmake .. -DPICO_BOARD=pico2 -DWAVESHARE_RP2350_ONE=ON -DVIDPID=Yubikey5
+          PICO_SDK_PATH="${PICO_SDK_PATH}" cmake .. -DPICO_BOARD=pico2 -DVIDPID=Yubikey5
           make -j$(nproc)
           mv pico_fido.uf2 ../release/pico_fido_pico2_yubikey5.uf2
 
@@ -86,7 +86,6 @@ jobs:
             Automatic build of YubiKey5 emulation firmware for RP2350
             
             **Board:** Pico 2 (RP2350)
-            **Waveshare RP2350-One LED:** Enabled
             **VID/PID:** 0x1050:0x0407 (YubiKey5)
           artifacts: "release/pico_fido_pico2_yubikey5.uf2"
           draft: false
