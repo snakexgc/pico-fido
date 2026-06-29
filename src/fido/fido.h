@@ -89,7 +89,9 @@ extern int ecdh(uint8_t protocol, const mbedtls_ecp_point *Q, uint8_t *sharedSec
 #define FIDO2_OPT_NORK          0x04 // No Resident Key
 #define FIDO2_OPT_MCUV_NOTRQD   0x08 // User Verification Not Required
 
+#ifndef MAX_PIN_RETRIES
 #define MAX_PIN_RETRIES 8
+#endif
 extern bool getUserPresentFlagValue(void);
 extern bool getUserVerifiedFlagValue(void);
 extern void clearUserPresentFlag(void);
@@ -161,5 +163,16 @@ typedef enum {
     DEV_STATE_ALL = DEV_STATE_DEV_ID | DEV_STATE_CRED_STATE
 } dev_state_t;
 extern int dev_state_update(dev_state_t state);
+
+typedef enum {
+    PIN_POLICY_NONE = 0x0,
+    PIN_POLICY_UPPER = 0x1,
+    PIN_POLICY_LOWER = 0x2,
+    PIN_POLICY_DIGIT = 0x4,
+    PIN_POLICY_SYMBOL = 0x8,
+    PIN_POLICY_ALL = PIN_POLICY_UPPER | PIN_POLICY_LOWER | PIN_POLICY_DIGIT | PIN_POLICY_SYMBOL,
+    PIN_POLICY_ALPHANUMERIC = PIN_POLICY_UPPER | PIN_POLICY_LOWER | PIN_POLICY_DIGIT,
+    PIN_POLICY_COMPLEX = PIN_POLICY_ALPHANUMERIC | PIN_POLICY_SYMBOL
+} pin_policy_t;
 
 #endif //_FIDO_H
